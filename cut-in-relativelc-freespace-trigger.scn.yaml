@@ -1,0 +1,208 @@
+metadata:
+  name: cut-in-relativeLC-freespace-trigger
+  scenario_version: v0.96
+  author_email: stan@applied.co
+  description: ""
+vehicle:
+  mesh_name: applied:car
+  shape:
+    front_edge_to_center: 3.7
+    back_edge_to_center: 1.0
+    left_edge_to_center: 0.9
+    right_edge_to_center: 0.9
+    height: 1.5
+  kinematic_bicycle:
+    wheelbase: 2.8
+    max_velocity: 30.0
+    max_deceleration: 9.0
+    max_acceleration: 1.5
+    max_steering_angle: 0.42
+    max_steering_rate: 0.84
+    num_integration_steps: 1
+sim_end:
+  until:
+  - timeout: {secs: 25s}
+map:
+  key: straight_highway_3
+projection_settings:
+  utm:
+    north: true
+    zone: 10
+trip_agent:
+  behavior:
+  - generate_route:
+      dest:
+        utm:
+          x: 301628.8788919519
+          y: 4676068.385309468
+          z: 0
+      start: {utm: {x: 500045.10975523555, y: 4499996}}
+agents:
+- ego:
+    initial_position:
+      point: {utm: {x: 500045.10975523555, y: 4499996}}
+      heading: 0
+    initial_velocity_mps: !math "$cut_in_speed_mps_sweep + 7"
+    behaviors:
+    - smooth_lane_keeping:
+        adaptive_cruise:
+          desired_time_gap: 2s
+          enforce_max_bounds: true
+          max_accel: 3
+          max_decel: 9
+          min_dist: 10
+          lookahead_dist: 100
+        constant_velocity:
+        params:
+          distance: 1000
+- obstacle:
+    behaviors:
+    - smooth_lane_keeping:
+        constant_velocity:
+        params:
+          distance: 1000
+      until_true:
+        and:
+          conditions:
+          - not:
+              in_region:
+                region:
+                  polygon_local:
+                    reference_object:
+                      obstacle_id: 1
+                    local_point:
+                    - {x: -3, y: -8}
+                    - {x: -3, y: 8}
+                    - {x: -20, y: 8}
+                    - {x: -20, y: -8} # 20m behind
+                obstacle:
+                  all_obstacles:
+          - in_region:
+              region:
+                polygon_local:
+                  reference_object:
+                    obstacle_id: 1
+                  local_point:
+                  - {x: -3, y: -8}
+                  - {x: -3, y: 8}
+                  - {x: $trigger_dist, y: 8}
+                  - {x: $trigger_dist, y: -8}   # 30m behind
+              obstacle:
+                ego:
+    - lane_change:
+        motion_profile:
+          phases:
+          - hold_velocity:
+              duration: 1
+          - ramp_velocity:
+              rate: $decel_rate
+              target: !math "$cut_in_speed_mps_sweep - $speed_delta"
+          - hold_velocity:
+              duration: 100
+        geometric:
+          center:
+            lateral_offset: -2
+            longitudinal_offset: !math "$transition_distance / 2"
+          endpoint:
+            lateral_offset: -4
+            longitudinal_offset: !math "$transition_distance"
+    - smooth_lane_keeping:
+        constant_velocity:
+        params:
+          distance: 1000
+    model:
+      static:
+        height: 1.5
+        point:
+        - x: 2.3
+          y: 0.9
+        - x: 2.3
+          y: -0.9
+        - x: -2.3
+          y: -0.9
+        - x: -2.3
+          y: 0.9
+    initial_state:
+      point: {utm: {x: 500157.9068639188, y: 4500000}}
+      speed_mps: $cut_in_speed_mps_sweep
+      heading: 0
+    type: VEHICLE
+    id: 1
+- obstacle:
+    behaviors:
+    - smooth_lane_keeping:
+        constant_velocity:
+        params:
+          distance: 1000
+    model:
+      static:
+        height: 1.5
+        point:
+        - x: 2.3
+          y: 0.9
+        - x: 2.3
+          y: -0.9
+        - x: -2.3
+          y: -0.9
+        - x: -2.3
+          y: 0.9
+    initial_state:
+      point:
+        utm:
+          x: 500134.95452329813
+          y: 4499996
+          z: 0
+      speed_mps: !math "$cut_in_speed_mps_sweep + 7"
+      heading: 0
+    type: VEHICLE
+    id: 2
+parameter_sweeps:
+- range:
+    first_value: 18
+    last_value: 22
+    num_steps: 4
+    var: cut_in_speed_mps_sweep
+    group: speed and trigger distance
+- range:
+    first_value: -35
+    last_value: -25
+    num_steps: 4
+    var: trigger_dist
+    group: speed and trigger distance
+- range:
+    var: transition_distance
+    first_value: 60
+    last_value: 100
+    num_steps: 4
+- range:
+    var: decel_rate
+    first_value: 1
+    last_value: 2
+    num_steps: 3
+    group: decel rate and target
+- range:
+    var: speed_delta
+    first_value: 1
+    last_value: 5
+    num_steps: 3
+    group: decel rate and target
+
+observers:
+- name: Max Deceleration 2
+  always_true:
+    compare:
+      x:
+        ego_motion:
+          longitudinal_acceleration:
+    # Add maximum negative acceleration here
+      greater_than: {static_number: -2}
+  is_optional: true
+- name: Max Deceleration 5
+  always_true:
+    compare:
+      x:
+        ego_motion:
+          longitudinal_acceleration:
+    # Add maximum negative acceleration here
+      greater_than: {static_number: -5}
+  is_optional: true

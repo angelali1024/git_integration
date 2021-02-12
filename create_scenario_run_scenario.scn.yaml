@@ -1,0 +1,13 @@
+metadata:
+  name: create_run_test
+  scenario_version: v0.96
+sim_end:
+  until:
+  - timeout: {secs: 0s}
+map:
+  key: sunnyvale
+projection_settings:
+  utm:
+    north: true
+    zone: 10
+
