@@ -52,6 +52,7 @@ agents:
               y: 4127151.3860468096
               x: 610127.9055490908
         minimum_attractor_distance: 2
+  omg haha this is so cool!
 trip_agent:
   behavior:
   - generate_route:
