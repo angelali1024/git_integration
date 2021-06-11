@@ -1,5 +1,5 @@
 metadata:
-  name: baseline_composite_vehicle_sideslip
+  name: baseline_composite_vehicle_sideslip_hello
   scenario_version: v0.96
 
   custom_fields:
